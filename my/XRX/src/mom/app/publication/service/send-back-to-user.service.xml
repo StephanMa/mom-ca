@@ -1,0 +1,117 @@
+<xrx:service xmlns:o="http://www.monasterium.net/NS/o" xmlns:xrx="http://www.monasterium.net/NS/xrx">
+  <xrx:id>tag:monasterium.net,2011:/mom/service/send-back-to-user</xrx:id>
+  <xrx:licence>
+This is a component file of the VdU Software for a Virtual Research Environment for the handling of Medieval charters.
+
+As the source code is available here, it is somewhere between an alpha- and a beta-release, may be changed without any consideration of backward compatibility of other parts of the system, therefore, without any notice.
+
+This file is part of the VdU Virtual Research Environment Toolkit (VdU/VRET).
+
+The VdU/VRET is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+VdU/VRET is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with VdU/VRET.  If not, see http://www.gnu.org/licenses.
+  </xrx:licence>
+  <xrx:init>
+   <xrx:processor>
+     <xrx:translateflag>false</xrx:translateflag>
+   </xrx:processor>
+  </xrx:init>
+  <xrx:variables>
+    <!-- request parameters -->
+    <xrx:variable>
+      <xrx:name>$atomid</xrx:name>
+      <xrx:expression>if($data//*:id) then $data//*:id/text() else request:get-parameter("id", "")</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$atomtag</xrx:name>
+      <xrx:expression>conf:param('atom-tag-name')</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$archive</xrx:name>
+      <xrx:expression>charter:archid($atomid, $atomtag)</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$fond-or-collection</xrx:name>
+      <xrx:expression>charter:context($atomid, $atomtag)</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$fond</xrx:name>
+      <xrx:expression>charter:fondid($atomid, $atomtag)</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$collection</xrx:name>
+      <xrx:expression>charter:collectionid($atomid, $atomtag)</xrx:expression>
+    </xrx:variable>	
+    <xrx:variable>
+      <xrx:name>$comment</xrx:name>
+      <xrx:expression>if($data//*:comment) then $data//*:comment/text() else request:get-parameter("comment", "")</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$user</xrx:name>
+      <xrx:expression>if($data//*:user) then $data//*:user/text() else request:get-parameter("user", "")</xrx:expression>
+    </xrx:variable>
+    <!-- the transcription entry -->
+    <xrx:variable>
+      <xrx:name>$source-collection</xrx:name>
+      <xrx:expression>metadata:base-collection('charter', 'saved')</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$entry</xrx:name>
+      <xrx:expression>$source-collection//atom:id[.=$atomid]/root(.)/atom:entry</xrx:expression>
+    </xrx:variable>
+    <xrx:variable>
+      <xrx:name>$author</xrx:name>
+      <xrx:expression>$entry//atom:author/atom:email/text()</xrx:expression>
+    </xrx:variable>
+  </xrx:variables>
+  <xrx:emails>
+    <xrx:email>
+      <xrx:key>send-back-to-user-email</xrx:key>
+      <mail xmlns="">
+          <from>{ xs:string(conf:param('mail-service-address')) }</from>
+          <to>{ xs:string($author) }</to>
+          <cc>{ xs:string($xrx:user-id) }</cc>
+          <bcc></bcc>
+          <subject>Monasterium - Editorial Service</subject>
+          <message>
+              <text>
+              
+Monasterium - Editorial Service. { user:firstname-name($xrx:user-id) } asks you to revise a version-to-publish.
+
+Archive: { $archive }
+Fond: { $fond }
+Collection: { $collection }
+Comment: { $comment }
+
+To revise the charter please log-in here: { $xrx:http-request-root }saved-charters
+
+You are receiving this email because you are a user of Monasterium.
+
+              </text>
+          </message>
+      </mail>
+    </xrx:email>
+  </xrx:emails>
+  <xrx:body>
+  {
+    let $suggest := publication:write-comment( $id, $comment, $author)
+
+    let $sendmail :=
+    <xrx:sendmail>
+      <xrx:key>send-back-to-user-email</xrx:key>
+    </xrx:sendmail>
+
+    return
+    <xrx:response>{ $suggest }</xrx:response>
+  }
+  </xrx:body>
+</xrx:service>

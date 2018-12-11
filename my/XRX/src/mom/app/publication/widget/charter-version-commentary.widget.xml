@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<xrx:widget xmlns:xrx="http://www.monasterium.net/NS/xrx" xmlns="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xf="http://www.w3.org/2002/xforms">
+  <xrx:id>tag:www.monasterium.net,2011:/mom/widget/charter-version-difference</xrx:id>
+  <xrx:title>
+    <xrx:i18n>
+      <xrx:key>charter-version-difference</xrx:key>
+      <xrx:default>Charter Version Difference</xrx:default>
+    </xrx:i18n>
+  </xrx:title>
+  <xrx:subtitle/>
+  <xrx:description/>
+  <xrx:author>jochen.graf@uni-koeln.de</xrx:author>
+  <xrx:licence>
+This is a component file of the VdU Software for a Virtual Research Environment for the handling of Medieval charters.
+
+As the source code is available here, it is somewhere between an alpha- and a beta-release, may be changed without any consideration of backward compatibility of other parts of the system, therefore, without any notice.
+
+This file is part of the VdU Virtual Research Environment Toolkit (VdU/VRET).
+
+The VdU/VRET is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+VdU/VRET is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with VdU/VRET.  If not, see http://www.gnu.org/licenses.
+
+We expect VdU/VRET to be distributed in the future with a license more lenient towards the inclusion of components into other systems, once it leaves the active development stage.
+  </xrx:licence>
+  <xrx:portal>tag:www.monasterium.net,2011:/mom/portal/desktop</xrx:portal>
+  <xrx:init>
+    <xrx:processor>
+      <xrx:xformsflag>false</xrx:xformsflag>
+    </xrx:processor>
+  </xrx:init>
+  <xrx:csss>
+    <xrx:resource>tag:www.monasterium.net,2011:/xrx/resource/css/codemirror/lib/codemirror</xrx:resource>
+    <xrx:resource>tag:www.monasterium.net,2011:/mom/resource/css/codemirror/momtextdiff</xrx:resource>
+    <style type="text/css">
+#dcharter-version-difference{{
+  position: relative;
+  float: left;
+  width: 800px;
+}}
+.CodeMirror{{
+  line-height: 1.4em;
+  font-family: "Trebuchet MS", regular, sans-serif;
+  font-size: 18px;
+}}
+.CodeMirror-scroll{{
+  height: auto;
+  overflow-y: hidden;
+  overflow-x: auto;
+  /* This is needed to prevent an IE[67] bug where the scrolled content
+     is visible outside of the scrolling box. */
+  position: relative;
+  border: solid white 1px;
+}}
+    </style>
+  </xrx:csss>
+  <xrx:jss>
+    <xrx:resource>tag:www.monasterium.net,2011:/xrx/resource/jquery/jquery</xrx:resource>
+    <xrx:resource>tag:www.monasterium.net,2011:/xrx/resource/js/codemirror/lib/codemirror</xrx:resource>
+    <xrx:resource>tag:www.monasterium.net,2011:/mom/resource/js/codemirror/momtextdiff</xrx:resource>
+  </xrx:jss>
+  <xrx:model>
+    {
+    (: request parameters :)
+    let $id := request:get-parameter("id", "")
+    return
+    <xf:model id="msend-back-to-user">
+      <xf:instance>
+	<data/>
+      </xf:instance>
+      <xf:instance id="iresponse">
+	      <data xmlns="">
+		      <atomid>{$id}</atomid>
+		      <comment/>
+  	      </data>
+      </xf:instance>
+      <xf:submission id="ssend-back-to-user"
+		     action="{ conf:param('request-root') }service/?atomid=tag:monasterium.net,2011:/mom/service/send-back-to-user"
+		     method="post"
+		     replace="instance"
+		     instance="iresponse"/>
+
+    </xf:model>
+    }
+  </xrx:model>
+ 
+  <xrx:view>
+  {
+  	(: request parameter :)
+    let $charter-atomid := request:get-parameter('id', '')
+    let $backlink := request:get-parameter('backlink', '')
+    let $other-id := request:get-parameter('other-id','') 
+    let $rev-id := request:get-parameter('rev', '')
+    
+    (: public charter :)
+    let $atom-tag-name := conf:param('atom-tag-name')
+    let $fond-or-collection := charter:context($charter-atomid, $atom-tag-name)
+    let $archive-id := charter:archid($charter-atomid, $atom-tag-name)
+    let $fond-id := charter:fondid($charter-atomid, $atom-tag-name)
+    let $collection-id := charter:collectionid($charter-atomid, $atom-tag-name)
+    let $public-base-collection := 
+    	if($fond-or-collection = 'fond') then 
+    		metadata:base-collection('charter', ($archive-id, $fond-id), 'public')
+    	else 
+        metadata:base-collection('charter', $collection-id, 'public')
+        
+    (: If Revision-id is submitted: Use Versioning-Object as saved Charter :)
+    let $public-entry := $public-base-collection//atom:id[.=$charter-atomid]/parent::atom:entry
+    let $public-doc := doc(base-uri($public-entry))
+    
+    (: saved charter :)
+    let $saved-base-collection := metadata:base-collection('charter', 'saved')
+    let $published-base-collection := metadata:base-collection('charter', 'public')   
+    
+    let $saved-entry :=
+      if($rev-id = "" ) then
+       
+        if( $other-id = "" ) then 
+          $saved-base-collection//atom:id[.=$charter-atomid]/parent::atom:entry
+        else
+          $published-base-collection//atom:id[.=$other-id]/parent::atom:entry
+          
+      else
+        root(v:doc($public-doc, xs:int($rev-id)))//atom:entry
+
+
+        
+    (: version difference :)
+    let $xslt := i18n:translate-xml($xrx:db-base-collection/xsl:stylesheet[@id='cei2versiondiff'])
+    let $saved-as-text := transform:transform($saved-entry/atom:content/cei:text, $xslt, ())
+    let $public-as-text := transform:transform($public-entry/atom:content/cei:text, $xslt, ())
+    let $diff := text:diff($public-as-text, $saved-as-text)
+
+    return
+    
+    <div data-demoid="b057d915-d868-404b-b399-84e947fbcce9" id="dcharter-version-difference">
+      <div data-demoid="1084a6fa-6b7e-40fa-935b-a9e193ded682">
+        <a href="{ $backlink }">
+	        <span>&lt;&lt; </span>
+	        <xrx:i18n>
+	          <xrx:key>back</xrx:key>
+	          <xrx:default>back</xrx:default>
+	        </xrx:i18n>
+	      </a>
+      </div>
+      <div class="h2" data-demoid="adb1b800-0a9e-499e-afe5-a988f64f16c9">
+        <xrx:i18n>
+          <xrx:key>charter-version-difference</xrx:key>
+          <xrx:default>Charter Version Difference</xrx:default>
+        </xrx:i18n>
+      </div>
+      <div class="ddiff" data-demoid="8edf8fee-0f9a-45fd-a436-1b0eb6beca35">
+	      <script type="text/javascript">
+        $(document).ready(function() {{
+	        CodeMirror.fromTextArea(document.getElementById('tdiff'), {{ lineWrapping: true, readOnly: 'nocursor', lineNumbers:true, mode: 'momtextdiff' }});
+	      }});
+	      </script>
+	      <textarea id="tdiff" name="tdiff">{ $diff/text() }</textarea>      
+      </div>
+      <div id="dcomment">
+	<div>
+	  <div>
+	    <span>
+	      <xrx:i18n>
+		<xrx:key>make-some-comments-message</xrx:key>
+		<xrx:default>Make some comments about your editions/revisions!</xrx:default>
+	      </xrx:i18n>
+	    </span>
+	  </div>
+	</div>
+	<xf:group model="msend-back-to-user">
+	  <xf:textarea id="comment-textarea" appearance="growing" ref="comment"/>
+	</xf:group>
+      </div>
+      <xrx:group model="msend-back-to-user">
+	<div id="dsend-button">
+	  <xf:trigger>
+	    <xf:label>
+	      <xrx:i18n>
+		<xrx:key>cancel</xrx:key>
+		<xrx:default>Cancel</xrx:default>
+	      </xrx:i18n>
+	    </xf:label>
+	    <xf:action ev:event="DOMActivate">
+	      <xf:load show="replace" resource="{ $backlink }"/>
+	    </xf:action>
+	  </xf:trigger>
+	  <xf:trigger>
+	    <xf:label>
+	      <xrx:i18n>
+		<xrx:key>send-now</xrx:key>
+		<xrx:default>Send now</xrx:default>
+	      </xrx:i18n>
+	      <span>!</span>
+	    </xf:label>
+	    <xf:action ev:event="DOMActivate">
+	      <xf:send submission="ssend-back-to-user"/>
+	      <xf:load show="replace" resource="{ $backlink }"/>
+	    </xf:action>
+	  </xf:trigger>
+	</div>
+      </xrx:group>
+    </div>
+  }
+  </xrx:view>
+</xrx:widget>

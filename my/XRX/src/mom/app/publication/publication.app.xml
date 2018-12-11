@@ -68,7 +68,12 @@ along with VdU/VRET.  If not, see http://www.gnu.org/licenses.
     	<xrx:uripattern>/charter-version-difference$</xrx:uripattern>
     	<xrx:mode>mainwidget</xrx:mode>
     	<xrx:atomid>tag:www.monasterium.net,2011:/mom/widget/charter-version-difference</xrx:atomid>
-    </xrx:map> 
+    </xrx:map>
+    <xrx:map>
+	<xrx:uripattern>/charter-version-commentary$</xrx:uripattern>
+	<xrx:mode>mainwidget</xrx:mode>
+	<xrx:atomid>tag:www.monasterium.net,2011:/mom/widget/charter-version-commentary</xrx:atomid>
+    <xrx:map>
     <xrx:map>
       <xrx:uripattern>/charters-to-publish$</xrx:uripattern>
       <xrx:mode>mainwidget</xrx:mode>
@@ -103,6 +108,11 @@ along with VdU/VRET.  If not, see http://www.gnu.org/licenses.
       <xrx:uripattern>/service/save-charter$</xrx:uripattern>
       <xrx:mode>service</xrx:mode>
       <xrx:atomid>tag:www.monasterium.net,2011:/mom/service/save-charter</xrx:atomid>
+    </xrx:map>
+    <xrx:map>
+      <xrx:uripattern>/service/send-back-to-user$</xrx:uripattern>
+      <xrx:mode>service</xrx:mode>
+      <xrx:atomid>tag:www.monasterium.net,2011:/mom/service/send-back-to-user</xrx:atomid>
     </xrx:map>
   </xrx:resolver>
 </xrx:app>

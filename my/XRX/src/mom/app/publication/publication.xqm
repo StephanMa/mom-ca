@@ -606,4 +606,31 @@ declare function publication:change-element-ns
                                 else ':',
                                 local-name($element)))}
            {$element/@*, $element/node()}
- } ;
+ };
+
+(: add comment statement to userfile and reset status :)
+declare function publication:write-comment($id as xs:string, $comment as xs:string, $author as xs:string ) {
+   
+   let $commentary :=             element xrx:comment {
+                attribute commentator{$xrx:user-id},
+                attribute timestamp{current-dateTime()},
+                $comment
+                }
+   let $basecommentary := element xrx:commentaries{
+            namespace xrx { "http://www.monasterium.net/NS/xrx" }, 
+            $commentary 
+            }
+
+  (: get userfile for commentary :)
+  let $user-xml := collection(conf:param('xrx-user-db-base-uri'))//xrx:user[xrx:email=$author]//xrx:saved_list 
+
+  let $user-entry := $user-xml//xrx:id[text() = $id]/ancestor::*[local-name() = "saved"]
+
+  let $commentaries := $user-entry//xrx:commentaries
+  let $commentaryfile := if $commentaries then 
+				update insert $commentary into $commentaries 
+			else
+				update insert $basecommentary into $user-entry
+
+  return $commentaryfile
+} ;
