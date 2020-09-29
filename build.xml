@@ -33,7 +33,7 @@
 
     <!-- System -->
     <property name="build-scripts-home" value="build"/>
-    <property name="data-home" value="/opt/${project-name}.XRX-data"/>
+    <property name="data-home" value="${project-name}.XRX-data"/>
     <property name="tmp-home" value="tmp"/>
     <property name="exist-extensions" value="extensions/betterform/main/lib" />
     <property name="exist-live" value="exist-distribution/target/exist-distribution-5.2.0-dir" />

@@ -64,7 +64,7 @@
 
   <xsl:template match="//recovery/@journal-dir">
     <xsl:attribute name="journal-dir">
-       <xsl:text>../</xsl:text>
+	    <xsl:text>../../../../../../</xsl:text>
        <xsl:value-of select="$db-files"/>
     </xsl:attribute>
   </xsl:template>
