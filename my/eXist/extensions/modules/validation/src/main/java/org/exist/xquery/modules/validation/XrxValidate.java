@@ -2,8 +2,11 @@ package org.exist.xquery.functions.validation;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -15,12 +18,15 @@ import org.exist.dom.QName;
 import org.exist.dom.memtree.DocumentImpl;
 import org.exist.dom.memtree.MemTreeBuilder;
 import org.exist.dom.memtree.NodeImpl;
+import org.exist.resolver.ResolverFactory;
+import org.exist.resolver.XercesXmlResolverAdapter;
 import org.exist.storage.BrokerPool;
 import org.exist.util.Configuration;
 import org.exist.util.XMLReaderObjectFactory;
 import org.exist.validation.GrammarPool;
 import org.exist.validation.resolver.SearchResourceResolver;
-import org.exist.validation.resolver.eXistXMLCatalogResolver;
+import org.xmlresolver.Resolver;
+import org.xmlresolver.XMLResolverConfiguration;
 import org.exist.xquery.BasicFunction;
 import org.exist.xquery.Cardinality;
 import org.exist.xquery.FunctionSignature;
@@ -39,11 +45,16 @@ import org.xml.sax.SAXNotRecognizedException;
 import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.AttributesImpl;
+import org.xmlresolver.Resolver;
+
+import static com.evolvedbinary.j8fu.tuple.Tuple.Tuple;
 
 public class XrxValidate extends BasicFunction {
 
-	private final BrokerPool brokerPool;
-	
+	private  BrokerPool brokerPool;
+	private  XMLEntityResolver entityResolver;
+	private  GrammarPool grammarPool;
+
 	public final static FunctionSignature signatures[] = {
         new FunctionSignature(
                 new QName("xrx-instance", ValidationModule.NAMESPACE_URI, ValidationModule.PREFIX), 
@@ -63,15 +74,12 @@ public class XrxValidate extends BasicFunction {
 	
 	public XrxValidate(XQueryContext context, FunctionSignature signature) {
         super(context, signature);
-        brokerPool = context.getBroker().getBrokerPool();
+        this.brokerPool = context.getBroker().getBrokerPool();
 	}
 
 	@Override
 	public Sequence eval(Sequence[] args, Sequence contextSequence) throws XPathException {
 
-		XMLEntityResolver entityResolver = null;
-		GrammarPool grammarPool = null;
-		
 		XrxValidationHandler handler = new XrxValidationHandler();
 		XrxValidationReport report = new XrxValidationReport();
 		handler.setXrxValidationReport(report);
@@ -97,8 +105,9 @@ public class XrxValidate extends BasicFunction {
                 // Use system catalog
                 LOG.debug("Using system catalog.");
                 Configuration config = brokerPool.getConfiguration();
-                entityResolver = (eXistXMLCatalogResolver) config.getProperty(XMLReaderObjectFactory.CATALOG_RESOLVER);
-                setXmlReaderEnitityResolver(xmlReader, entityResolver);
+
+                this.entityResolver = (XMLEntityResolver) config.getProperty(XMLReaderObjectFactory.CATALOG_RESOLVER);
+                setXmlReaderEnitityResolver(xmlReader, this.entityResolver);
 
             } else {
                 // Get URL for catalog
@@ -108,14 +117,13 @@ public class XrxValidate extends BasicFunction {
                 if (singleUrl.endsWith("/")) {
                     // Search grammar in collection specified by URL. Just one collection is used.
                     LOG.debug("Search for grammar in " + singleUrl);
-                    entityResolver = new SearchResourceResolver(catalogUrls[0], brokerPool);
-                    setXmlReaderEnitityResolver(xmlReader, entityResolver);
+                    this.entityResolver = new SearchResourceResolver( this.brokerPool, context.getSubject(),catalogUrls[0]);
+                    setXmlReaderEnitityResolver(xmlReader, this.entityResolver);
 
                 } else if (singleUrl.endsWith(".xml")) {
                     LOG.debug("Using catalogs " + getStrings(catalogUrls));
-                    entityResolver = new eXistXMLCatalogResolver();
-                    ((eXistXMLCatalogResolver) entityResolver).setCatalogList(catalogUrls);
-                    setXmlReaderEnitityResolver(xmlReader, entityResolver);
+		    final Resolver localResolver = ResolverFactory.newResolver(Arrays.asList(Tuple(singleUrl, Optional.empty())));
+                    setXmlReaderEnitityResolver(xmlReader, localResolver);
 
                 } else {
                     LOG.error("Catalog URLs should end on / or .xml");
@@ -127,8 +135,8 @@ public class XrxValidate extends BasicFunction {
             if (useCache) {
                 LOG.debug("Grammar caching enabled.");
                 Configuration config = brokerPool.getConfiguration();
-                grammarPool = (GrammarPool) config.getProperty(XMLReaderObjectFactory.GRAMMER_POOL);
-                xmlReader.setProperty(XMLReaderObjectFactory.APACHE_PROPERTIES_INTERNAL_GRAMMARPOOL, grammarPool);
+                this.grammarPool = (GrammarPool) config.getProperty(XMLReaderObjectFactory.GRAMMER_POOL);
+                xmlReader.setProperty(XMLReaderObjectFactory.APACHE_PROPERTIES_INTERNAL_GRAMMARPOOL, this.grammarPool);
             }
             
     		xmlReader.parse(instance);
@@ -141,7 +149,10 @@ public class XrxValidate extends BasicFunction {
 			LOG.error(e.getMessage());
 		} catch (IOException e) {
 			LOG.error(e.getMessage());
-		} finally {
+		} catch (URISyntaxException e) {
+			LOG.error(e.getMessage());
+		}
+		finally {
             report.stop();
 
             Shared.closeInputSource(instance);			
@@ -180,10 +191,11 @@ public class XrxValidate extends BasicFunction {
         }
     }
     
-    private void setXmlReaderEnitityResolver(XMLReader xmlReader, XMLEntityResolver entityResolver ){
+    private void setXmlReaderEnitityResolver(XMLReader xmlReader, Object entityResolver ){
 
         try {
-            xmlReader.setProperty(XMLReaderObjectFactory.APACHE_PROPERTIES_ENTITYRESOLVER, entityResolver);
+	    XercesXmlResolverAdapter.setXmlReaderEntityResolver(xmlReader, (XMLEntityResolver)entityResolver);
+            //xmlReader.setProperty(XMLReaderObjectFactory.APACHE_PROPERTIES_ENTITYRESOLVER, entityResolver);
 
         } catch (SAXNotRecognizedException ex) {
             LOG.error(ex.getMessage());
